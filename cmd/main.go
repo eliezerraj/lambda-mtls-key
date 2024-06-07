@@ -49,7 +49,7 @@ func main(){
 }
 
 func lambdaHandler(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
-	log.Debug().Msg("--- lambdaHandler 1.1---")
+	log.Debug().Msg("--- lambdaHandler ---")
 
 	// Check the http method and path
 	switch req.HTTPMethod {

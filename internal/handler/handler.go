@@ -107,7 +107,7 @@ func (h *WorkerHandler) CreateCRL(ctx context.Context, req events.APIGatewayProx
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
 
-	// Save the CRL
+	// Save the CRL S3
 	err = util.SaveKeyAsFileS3(	ctx, 
 								h.awsConfig, 
 								h.appServer.InfoApp.BucketNameKey,
