@@ -11,10 +11,7 @@ import (
 	"math/big"
 )
 
-func(w WorkerService) GenerateX509Cert(	privkey *rsa.PrivateKey, 
-										crt_serial int) (*x509.Certificate, 
-														*[]byte,
-														error){
+func(w WorkerService) GenerateX509Cert(	privkey *rsa.PrivateKey, crt_serial int) (*x509.Certificate, *[]byte, error){
 	childLogger.Debug().Msg("GenerateX509Cert")
 
 	crt := &x509.Certificate{

@@ -14,7 +14,8 @@ type InfoApp struct {
 	FileKey				string `json:"file_key"`
 }
 
-type RSA_Key struct  {
-	RSAPrivateKey			string 	`json:"rsa_private_key"`
-	RSAPrivateKeyEncoded	string 	`json:"rsa_private_encoded"`
+type Key_Pem struct  {
+	CertX509Pem			string 	`json:"cert_x509_pem,omitempty"`
+	RSAPrivateKeyPem	string 	`json:"rsa_private_key_pem,omitempty"`
+	CrlCaPem			string 	`json:"crl_ca_pem,omitempty"`
 }

@@ -17,8 +17,8 @@ func GetAppInfo() core.AppServer {
 		infoApp.AppName = os.Getenv("APP_NAME")
 	}
 
-	if os.Getenv("AWSRegion") !=  "" {
-		infoApp.AWSRegion = os.Getenv("AWSRegion")
+	if os.Getenv("AWS_REGION") !=  "" {
+		infoApp.AWSRegion = os.Getenv("AWS_REGION")
 	}
 
 	if os.Getenv("VERSION") !=  "" {
