@@ -1,12 +1,14 @@
 package service
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/pem"
 	"crypto/x509"
 
 	"github.com/rs/zerolog/log"
+	"github.com/lambda-mtls-key/internal/lib"
 )
 
 var childLogger = log.With().Str("service", "service").Logger()
@@ -22,12 +24,15 @@ func NewWorkerService() *WorkerService{
 	}
 }
 
-func(w WorkerService) GenerateRsaKeyPair() (*rsa.PrivateKey, 
-											*rsa.PublicKey,
-											*[]byte,
-											*[]byte,
-											error){
+func(w WorkerService) GenerateRsaKeyPair(ctx context.Context) (*rsa.PrivateKey, 
+																*rsa.PublicKey,
+																*[]byte,
+																*[]byte,
+																error){
 	childLogger.Debug().Msg("GenerateRsaKeyPair (private + public)")
+    
+	span := lib.Span(ctx, "service.generateRsaKeyPair")	
+    defer span.End()
 
 	// Generate the private key
 	privateKey, err := rsa.GenerateKey(rand.Reader, size)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"time"
 	"crypto/rand"
 	"crypto/rsa"
@@ -9,10 +10,14 @@ import (
 	"encoding/pem"
 	"net"
 	"math/big"
+	"github.com/lambda-mtls-key/internal/lib"
 )
 
-func(w WorkerService) GenerateX509Cert(	privkey *rsa.PrivateKey, crt_serial int) (*x509.Certificate, *[]byte, error){
+func(w WorkerService) GenerateX509Cert(ctx context.Context,	privkey *rsa.PrivateKey, crt_serial int) (*x509.Certificate, *[]byte, error){
 	childLogger.Debug().Msg("GenerateX509Cert")
+
+	span := lib.Span(ctx, "service.generateX509Cert")	
+    defer span.End()
 
 	crt := &x509.Certificate{
 		SerialNumber: big.NewInt(int64(crt_serial)),

@@ -2,6 +2,13 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Lambda Private template
 
 Parameters:
+  Env:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - hml
+      - prd
   FunctionLambdaName:
     Description: Lambda Name
     Type: String
@@ -14,7 +21,10 @@ Parameters:
     Description: App Name (TAG)
     Type: String
     Default: lambda-mtls-key
-
+  LambdaOtelLayerARN:
+    Description: Lambda ARN Otel Layer
+    Type: String
+    Default: arn:aws:lambda:us-east-2:901920570463:layer:aws-otel-collector-amd64-ver-0-90-1:1
   HandlerName:
     Type: String
     Description: Handler Name (go=main, python=index.handler)
@@ -43,7 +53,7 @@ Parameters:
   ManagedPolicyParameterThree:
     Description: Managed policy THREE (opcional)
     Type: String 
-    Default: ""
+    Default: arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
   Runtime:
     Description: Runtime Environment name e.g nodejs, provided.al2023(go1.x), python3.9
     Type: String
@@ -101,6 +111,8 @@ Resources:
             Resource: "*"
           - Effect: Allow
             Action:
+            - "xray:PutTraceSegments"
+            - "xray:PutTelemetryRecords"
             - "logs:CreateLogGroup"
             - "logs:CreateLogStream"
             - "logs:PutLogEvents"
@@ -114,14 +126,18 @@ Resources:
       Handler: !Ref HandlerName
       Timeout: !Ref Timeout
       Runtime: !Ref Runtime
+      Layers:
+        - !Ref LambdaOtelLayerARN
       Environment:
         Variables:
           APP_NAME: 'lambda-mtls-key'
-          REGION: 'us-east-2'
-          VERSION: '1.0'
           BUCKET_NAME_KEY: 'eliezerraj-908671954593-mtls-truststore'
+          ENV: !Ref Env
           FILE_PATH: '/'
           FILE_KEY: 'crl_ca.pem'
+          REGION: 'us-east-2'
+          OTEL_EXPORTER_OTLP_ENDPOINT: 'localhost:4317'
+          VERSION: '1.0'
       VpcConfig:
         SecurityGroupIds:
           - Ref: VPCSecurityGroup	

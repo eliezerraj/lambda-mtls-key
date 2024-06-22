@@ -1,20 +1,25 @@
 package service
 
 import (
+    "context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"encoding/asn1"
+
+    "github.com/lambda-mtls-key/internal/lib"
 )
 
 var oidEmailAddress = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 
-func(w WorkerService) GenerateCSRKey(privkey *rsa.PrivateKey) ( *x509.CertificateRequest,
-                                                                *[]byte,
-                                                                error){
+func(w WorkerService) GenerateCSRKey(ctx context.Context,
+                                    privkey *rsa.PrivateKey) ( *x509.CertificateRequest, *[]byte, error){
 	childLogger.Debug().Msg("GenerateCSRKey")
+	
+    span := lib.Span(ctx, "service.generateCSRKey")	
+    defer span.End()
 
 	emailAddress := "eliezer.junior@dock.tech"
     subj := pkix.Name{

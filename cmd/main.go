@@ -1,7 +1,6 @@
 package main
 
 import(
-	//"fmt"
 	"context"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -14,7 +13,15 @@ import(
 	"github.com/lambda-mtls-key/internal/util"
 	"github.com/lambda-mtls-key/internal/service"
 	"github.com/lambda-mtls-key/internal/core"
+	"github.com/lambda-mtls-key/internal/lib"
 	"github.com/aws/aws-sdk-go-v2/config"
+
+	"go.opentelemetry.io/contrib/propagators/aws/xray"
+	"go.opentelemetry.io/otel"
+ 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -23,41 +30,63 @@ var (
 	workerService	*service.WorkerService
 	workerHandler	*handler.WorkerHandler
 	response		*events.APIGatewayProxyResponse
+	tracer 			trace.Tracer
 )
 
 func init(){
 	log.Debug().Msg("init")
 	zerolog.SetGlobalLevel(logLevel)
 	appServer = util.GetAppInfo()
+	configOTEL := util.GetOtelEnv()
+	appServer.ConfigOTEL = &configOTEL
 }
 
 func main(){
 	log.Debug().Msg("--- main ---")
-
+	log.Debug().Interface("appServer :",appServer).Msg("")
+	
 	ctx := context.Background()
-
 	awsConfig, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		panic("Error loading AWS configuration: " + err.Error())
 	}
 
+	// Instrument all AWS clients.
+	otelaws.AppendMiddlewares(&awsConfig.APIOptions)
+
 	workerService = service.NewWorkerService()
 	workerHandler = handler.NewWorkerHandler(*workerService, appServer, awsConfig)
 
+		//----- OTEL ----//
+	tp := lib.NewTracerProvider(ctx, appServer.ConfigOTEL, appServer.InfoApp)
+	defer func(ctx context.Context) {
+			err := tp.Shutdown(ctx)
+			if err != nil {
+				log.Error().Err(err).Msg("Error shutting down tracer provider")
+			}
+	}(ctx)
+	
+	otel.SetTextMapPropagator(xray.Propagator{})
+	otel.SetTracerProvider(tp)
+	
+	tracer = tp.Tracer("lambda-mtls-key-tracer")
+	lambda.Start(otellambda.InstrumentHandler(lambdaHandler, xrayconfig.WithRecommendedOptions(tp)... ))
+
 	// Start lambda handler
-	lambda.Start(lambdaHandler)
+	//lambda.Start(lambdaHandler)
 }
 
 func lambdaHandler(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	log.Debug().Msg("--- lambdaHandler ---")
 
+	ctx, span := tracer.Start(ctx, "lambdaHandler_otel_v1.2")
+    defer span.End()
+	
 	// Check the http method and path
 	switch req.HTTPMethod {
 		case "GET":
-			if (req.Resource == "/getKey/{id}"){  
-				response, _ = workerHandler.UnhandledMethod()
-			}else if (req.Resource == "/info"){
-				response, _ = workerHandler.GetInfo()
+			if (req.Resource == "/info"){  
+				response, _ = workerHandler.GetInfo(ctx)
 			}else {
 				response, _ = workerHandler.UnhandledMethod()
 			}

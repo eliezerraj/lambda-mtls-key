@@ -1,6 +1,7 @@
 package util
 
 import(
+	"context"
     "os"
 	"errors"
     "fmt"
@@ -10,6 +11,7 @@ import(
 	"encoding/base64"
 
 	"github.com/rs/zerolog/log"
+	"github.com/lambda-mtls-key/internal/lib"
 )
 
 var childLogger = log.With().Str("internal", "utils").Logger()
@@ -67,9 +69,12 @@ func SaveKeyAsFile(	key string,
     return nil
 }
 
-func ParsePEMToPrivateKey(pemString string) (*rsa.PrivateKey, error) {
+func ParsePEMToPrivateKey(ctx context.Context, pemString string) (*rsa.PrivateKey, error) {
     childLogger.Debug().Msg("ParsePEMToPrivateKey")
 
+	span := lib.Span(ctx, "util.parsePEMToPrivateKey")	
+    defer span.End()
+	
 	fmt.Println(pemString)
 
 	block, _ := pem.Decode([]byte(pemString))
@@ -85,8 +90,11 @@ func ParsePEMToPrivateKey(pemString string) (*rsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
-func ParsePemToCertx509(pemString string) (*x509.Certificate, error) {
+func ParsePemToCertx509(ctx context.Context, pemString string) (*x509.Certificate, error) {
     childLogger.Debug().Msg("ParsePemToCertx509")
+	
+	span := lib.Span(ctx, "util.parsePemToCertx509")	
+    defer span.End()
 
 	fmt.Println(pemString)
 
@@ -103,8 +111,11 @@ func ParsePemToCertx509(pemString string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func DecodeB64(base64String string) (string, error){
+func DecodeB64(ctx context.Context, base64String string) (string, error){
     childLogger.Debug().Msg("DecodeB64")
+	
+	span := lib.Span(ctx, "util.decodeB64")	
+    defer span.End()
 
     decodedBytes, err := base64.StdEncoding.DecodeString(base64String)
     if err != nil {

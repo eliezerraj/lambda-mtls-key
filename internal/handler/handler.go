@@ -10,6 +10,7 @@ import(
 	"github.com/lambda-mtls-key/internal/erro"
 	"github.com/lambda-mtls-key/internal/service"
 	"github.com/lambda-mtls-key/internal/util"
+	"github.com/lambda-mtls-key/internal/lib"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-lambda-go/events"
@@ -61,8 +62,11 @@ func (h *WorkerHandler) UnhandledMethod() (*events.APIGatewayProxyResponse, erro
 	return ApiHandlerResponse(http.StatusMethodNotAllowed, MessageBody{ErrorMsg: aws.String(erro.ErrMethodNotAllowed.Error())})
 }
 
-func (h *WorkerHandler) GetInfo() (*events.APIGatewayProxyResponse, error) {
+func (h *WorkerHandler) GetInfo(ctx context.Context) (*events.APIGatewayProxyResponse, error) {
 	childLogger.Debug().Msg("GetInfo")
+
+	span := lib.Span(ctx, "handler.getInfo")	
+    defer span.End()
 
 	handlerResponse, err := ApiHandlerResponse(http.StatusOK, h.appServer)
 	if err != nil {
@@ -74,6 +78,9 @@ func (h *WorkerHandler) GetInfo() (*events.APIGatewayProxyResponse, error) {
 
 func (h *WorkerHandler) CreateCRL(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	childLogger.Debug().Msg("CreateCRL")
+	
+	span := lib.Span(ctx, "handler.createCRL")	
+    defer span.End()
 
 	// Retrieve data from request
 	var key_pem core.Key_Pem
@@ -82,27 +89,27 @@ func (h *WorkerHandler) CreateCRL(ctx context.Context, req events.APIGatewayProx
     }
 
 	// Decode to Base64
-	RSAPrivateKeyPemDecoded, err := util.DecodeB64(key_pem.RSAPrivateKeyPem)
+	RSAPrivateKeyPemDecoded, err := util.DecodeB64(ctx, key_pem.RSAPrivateKeyPem)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
-	CertX509PemDecoded, err := util.DecodeB64(key_pem.CertX509Pem)
+	CertX509PemDecoded, err := util.DecodeB64(ctx, key_pem.CertX509Pem)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
 
 	// Parse the key pem
-	privateKey, err := util.ParsePEMToPrivateKey(RSAPrivateKeyPemDecoded)
+	privateKey, err := util.ParsePEMToPrivateKey(ctx, RSAPrivateKeyPemDecoded)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
-	certX509, err := util.ParsePemToCertx509(CertX509PemDecoded)
+	certX509, err := util.ParsePemToCertx509(ctx, CertX509PemDecoded)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
 
 	// Create a CRL
-	_, crl_pem ,err := h.workerService.CreateCRL(privateKey,certX509)
+	_, crl_pem ,err := h.workerService.CreateCRL(ctx,privateKey,certX509)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
@@ -131,6 +138,9 @@ func (h *WorkerHandler) CreateCRL(ctx context.Context, req events.APIGatewayProx
 
 func (h *WorkerHandler) VerifyCertCRL(ctx context.Context, req events.APIGatewayProxyRequest) (*events.APIGatewayProxyResponse, error) {
 	childLogger.Debug().Msg("VerifyCertCRL")
+	
+	span := lib.Span(ctx, "handler.verifyCertCRL")	
+    defer span.End()
 
 	// Retrieve data from request
 	var key_pem core.Key_Pem
@@ -139,13 +149,13 @@ func (h *WorkerHandler) VerifyCertCRL(ctx context.Context, req events.APIGateway
     }
 
 	// Decode to Base64
-	CertX509PemDecoded, err := util.DecodeB64(key_pem.CertX509Pem)
+	CertX509PemDecoded, err := util.DecodeB64(ctx, key_pem.CertX509Pem)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
 
 	// Parse the key pem
-	certX509, err := util.ParsePemToCertx509(CertX509PemDecoded)
+	certX509, err := util.ParsePemToCertx509(ctx, CertX509PemDecoded)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
@@ -160,7 +170,7 @@ func (h *WorkerHandler) VerifyCertCRL(ctx context.Context, req events.APIGateway
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}
 
-	response, err := h.workerService.VerifyCertCRL(*load_crl_pem, certX509)
+	response, err := h.workerService.VerifyCertCRL(ctx, *load_crl_pem, certX509)
 	if err != nil {
 		return ApiHandlerResponse(http.StatusBadRequest, MessageBody{ErrorMsg: aws.String(err.Error())})
 	}

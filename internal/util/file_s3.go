@@ -9,6 +9,7 @@ import(
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/lambda-mtls-key/internal/lib"
 )
 
 func SaveKeyAsFileS3(ctx context.Context,
@@ -19,6 +20,9 @@ func SaveKeyAsFileS3(ctx context.Context,
 					fileData		[]byte) error {
 	childLogger.Debug().Msg("SaveKeyAsFileS3")
 	childLogger.Debug().Msg("bucketNameKey :" + bucketNameKey + filePath + fileKey)
+
+	span := lib.Span(ctx, "util.saveKeyAsFileS3")	
+    defer span.End()
 
 	s3Client := s3.NewFromConfig(awsConfig)
 
@@ -56,6 +60,9 @@ func LoadKeyAsFileS3(ctx context.Context,
 					fileKey 		string) (*[]byte, error) {
 	childLogger.Debug().Msg("LoadKeyAsFileS3")
 	childLogger.Debug().Msg("bucketNameKey :" + bucketNameKey + filePath + fileKey)
+
+	span := lib.Span(ctx, "util.loadKeyAsFileS3")	
+    defer span.End()
 
 	s3Client := s3.NewFromConfig(awsConfig)
 

@@ -1,6 +1,7 @@
 package service
 
 import(
+	"context"
 	"fmt"
 	"time"
 	"crypto/rand"
@@ -8,11 +9,17 @@ import(
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+
+	"github.com/lambda-mtls-key/internal/lib"
 )
 
-func(w WorkerService) CreateCRL(privkey *rsa.PrivateKey, 
+func(w WorkerService) CreateCRL(ctx context.Context,
+								privkey *rsa.PrivateKey, 
 								cacert *x509.Certificate) (	*pkix.CertificateList, *[]byte, error){
 	childLogger.Debug().Msg("CreateCRL")
+
+	span := lib.Span(ctx, "service.createCRL")	
+    defer span.End()
 
 	revokedCerts := []pkix.RevokedCertificate{
         {
@@ -39,9 +46,13 @@ func(w WorkerService) CreateCRL(privkey *rsa.PrivateKey,
 	return res, &crl_pem, nil
 }
 
-func(w WorkerService) VerifyCertCRL(crl []byte, 
+func(w WorkerService) VerifyCertCRL(ctx context.Context,
+									crl []byte, 
 									cacert *x509.Certificate) (bool, error){
 	childLogger.Debug().Msg("VerifyCertCRL")
+
+	span := lib.Span(ctx, "service.verifyCertCRL")	
+    defer span.End()
 
 	certSerialNumber := cacert.SerialNumber
 	fmt.Println(certSerialNumber)
